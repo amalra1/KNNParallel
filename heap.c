@@ -2,7 +2,9 @@
 #include <math.h>
 #include "heap.h"
 
-// Pedro Amaral e Pedro William
+// Pedro Amaral e Pedro Willian
+
+
 
 // Printa elementos da Heap
 void drawHeapTree(par_t* heap, int size, int nLevels)

@@ -13,6 +13,6 @@
    # mpicc teste09.c -o teste09  
    # mpicc teste10.c -o teste10
    # mpicc teste11.c -o teste11
-   mpicc knn-mpi.c -o knn-mpi
+   mpicc knn-mpi.c -o knn-mpi -lm
 
 echo "  **** COMPILACAO COMPLETA ****  " 
