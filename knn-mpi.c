@@ -4,7 +4,6 @@
 #include <math.h>
 #include "mpi.h"
 #include "chrono.h"
-// #include "heap.h"
 
 typedef struct
 {
@@ -300,7 +299,7 @@ int main(int argc, char* argv[])
     R = malloc(nq * k * sizeof(par_t*));
 
     // Randomiza a SEED
-    // srand(time(NULL));
+    srand(time(NULL));
 
     // Preenche matrizes
     if(processId == 0){
@@ -310,50 +309,49 @@ int main(int argc, char* argv[])
         chrono_start(&chrono);
     }
 
-    // NO DECREASE MAX A CHAVE É A DISTANCIA CALCULADA ENTRE O Qi e Pi
-    // O VALOR É O ÍNDICE DO Pi
-    // A SAÍDA TEM QUE IMPRIMIR OS ÍNDICES DA HEAP FINAL --> VALORES
-
+    // Execução principal do programa
     calculaDistancias(Q, nq, P, npp, d, k, R, nq / nproc, MPI_COMM_WORLD, processId);
 
-    if(nq % nproc)
+    // Para os processos restantes se o número passado foi ímpar
+    if (nq % nproc)
         calculaDistanciasSeq(Q, nq, P, npp, d, k, R, nq - (nq % nproc));
 
 
+    // Impressão do tempo e realização dos testes
     if(processId == 0){
         chrono_stop(&chrono);
         double total_time_in_seconds = (double)chrono_gettotal(&chrono) / ((double)1000 * 1000 * 1000);
         printf("total_time_in_seconds: %lf s\n", total_time_in_seconds);
         double MBPS = (((double) nq * npp * d) / ((double)total_time_in_seconds*1000*1000));
         printf("Throughput: %lf MB/s\n", MBPS);
-        // verificaKNN(Q, nq, P, npp, d, k, R);
+        verificaKNN(Q, nq, P, npp, d, k, R);
     }
 
     // PRINTS DE TESTE
-    if(processId == 20){
+    // if(processId == 20){
 
-        for (int i = 0; i < nq; i++)
-        {
-            for (int j = 0; j < d; j++)
-                printf("[%.0f] ", Q[(i*d) + j]);
-            printf("\n");
-        }
-        printf("\n");
+    //     for (int i = 0; i < nq; i++)
+    //     {
+    //         for (int j = 0; j < d; j++)
+    //             printf("[%.0f] ", Q[(i*d) + j]);
+    //         printf("\n");
+    //     }
+    //     printf("\n");
 
-        for (int i = 0; i < npp; i++)
-        {
-            for (int j = 0; j < d; j++)
-                printf("[%.0f] ", P[(i*d) + j]);
-            printf("\n");
-        }
+    //     for (int i = 0; i < npp; i++)
+    //     {
+    //         for (int j = 0; j < d; j++)
+    //             printf("[%.0f] ", P[(i*d) + j]);
+    //         printf("\n");
+    //     }
 
-        for (int i = 0; i < nq; i++)
-        {
-            for (int j = 0; j < k; j++)
-                printf("[%.0f] ", R[(i*k) + j].chave);
-            printf("\n");
-        }
-    }
+    //     for (int i = 0; i < nq; i++)
+    //     {
+    //         for (int j = 0; j < k; j++)
+    //             printf("[%.0f] ", R[(i*k) + j].chave);
+    //         printf("\n");
+    //     }
+    // }
     
     // Libera memória
     free(P);
