@@ -324,7 +324,7 @@ int main(int argc, char* argv[])
         printf("total_time_in_seconds: %lf s\n", total_time_in_seconds);
         double MBPS = (((double) nq * npp * d) / ((double)total_time_in_seconds*1000*1000));
         printf("Throughput: %lf MB/s\n", MBPS);
-        //verificaKNN(Q, nq, P, npp, d, k, R);
+        verificaKNN(Q, nq, P, npp, d, k, R);
     }
 
     // PRINTS DE TESTE
