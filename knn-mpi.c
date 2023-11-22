@@ -4,12 +4,25 @@
 #include <math.h>
 #include "mpi.h"
 #include "chrono.h"
+#include <pthread.h>
 
 typedef struct
 {
     float chave;
     int valor;
 } par_t;
+
+long int nq, npp, d, k, limite, nt;
+int nproc, processId;
+float *Q, *P;
+par_t *R;
+float *heapChave, *QLocal, *heapChaveLocal;
+int *heapValor, *heapValorLocal;
+
+par_t** heaps;
+int* tamHeaps;
+
+pthread_t threads[10];
 
 #define parent(pos) ((pos - 1) / 2)
 
@@ -205,24 +218,28 @@ void calculaDistanciasSeq(float* Q, long int nq, float* P, long int npp, long in
     free(heap);
 }
 
+int min(int a, int b)
+{
+    if (a < b)
+        return a;
+    else
+        return b;
+}
 
-// Calcula os k vizinhos mais próximos de cada ponto de Q com os pontos de P e armazena em R
-void calculaDistancias(float* Q, long int nq, float* P, long int npp, long int d, long int k, par_t* R, int limite, MPI_Comm comm, int processId)
+// Calcula distancias mas em threads
+void* calculaDistanciasThreads(void *args)
 {
     float dist = 0.0;
-    par_t* heap = malloc(k * sizeof(par_t));
-    float heapChave[k * limite];
-    int heapValor[k * limite];
-    int tamHeap = 0;
-    float QLocal[d * limite];
-    float heapChaveLocal[k * nq];
-    int heapValorLocal[k * nq];
     
-    MPI_Scatter(Q, d * limite, MPI_FLOAT, QLocal, d * limite, MPI_FLOAT, 0, comm);
-    MPI_Bcast(P, npp * d, MPI_FLOAT, 0, comm);
+    int threadId = *(int *)args;
+    int nElem = limite/nt;
+    int prim = threadId * nElem;
+    int ult = min((threadId + 1) * nElem, limite) - 1;
+    if (threadId == nt - 1)
+        ult = limite - 1;
 
     // Para cada ponto de Q -> Qi
-    for (int i = 0; i < limite; i++)
+    for (int i = prim; i < ult; i++)
     {
         // Para cada ponto de P -> Pl
         for (int l = 0; l < npp; l++)
@@ -234,29 +251,27 @@ void calculaDistancias(float* Q, long int nq, float* P, long int npp, long int d
             }
             
             // Vai enchendo a heap
-            if (tamHeap < k)
-                insert(heap, &tamHeap, dist, l);
+            if (tamHeaps[i] < k)
+                insert(heaps[i], &tamHeaps[i], dist, l);
             else
-                decreaseMax(heap, tamHeap, dist, l);
+                decreaseMax(heaps[i], tamHeaps[i], dist, l);
             dist = 0.0;
             
         }
 
         // Copia os valores da heap pro R
         for (int l = 0; l < k; l++){
-            heapChave[(i * k) + l] = heap[l].chave;
-            heapValor[(i * k) + l] = heap[l].valor;
-            heap[l].chave = 0;
-            heap[l].valor = 0;
+            heapChave[(i * k) + l] = heaps[i][l].chave;
+            heapValor[(i * k) + l] = heaps[i][l].valor;
+            heaps[i][l].chave = 0;
+            heaps[i][l].valor = 0;
         }
 
-        tamHeap = 0;
+        tamHeaps[i] = 0;
     }
 
-    free(heap);
-
-    MPI_Gather(heapChave, k * limite, MPI_FLOAT, heapChaveLocal, k * limite, MPI_FLOAT, 0, comm);
-    MPI_Gather(heapValor, k * limite, MPI_INT, heapValorLocal, k * limite, MPI_INT, 0, comm);
+    //MPI_Gather(heapChave, k * limite, MPI_FLOAT, heapChaveLocal, k * limite, MPI_FLOAT, 0, comm);
+    //MPI_Gather(heapValor, k * limite, MPI_INT, heapValorLocal, k * limite, MPI_INT, 0, comm);
 
     if(processId == 0){
         for(int i = 0; i < nq; i++){
@@ -268,35 +283,100 @@ void calculaDistancias(float* Q, long int nq, float* P, long int npp, long int d
     }
 }
 
+
+// // Calcula os k vizinhos mais próximos de cada ponto de Q com os pontos de P e armazena em R
+// void calculaDistancias(float* Q, long int nq, float* P, long int npp, long int d, long int k, par_t* R, int limite, MPI_Comm comm, int processId)
+// {
+//     float dist = 0.0;
+    
+//     // MPI_Scatter(Q, d * limite, MPI_FLOAT, QLocal, d * limite, MPI_FLOAT, 0, comm);
+//     // MPI_Bcast(P, npp * d, MPI_FLOAT, 0, comm);
+
+//     // Para cada ponto de Q -> Qi
+//     for (int i = 0; i < limite; i++)
+//     {
+//         // Para cada ponto de P -> Pl
+//         for (int l = 0; l < npp; l++)
+//         {
+//             // Para cada dimensão dos dois pontos
+//             // Vai calculando a distância entre os dois
+//             for (int m = 0; m < d; m++){
+//                 dist = dist + (QLocal[(i * d) + m] - P[(l * d) + m])*(QLocal[(i * d) + m] - P[(l * d) + m]);
+//             }
+            
+//             // Vai enchendo a heap
+//             if (tamHeaps[i] < k)
+//                 insert(heaps[i], &tamHeaps[i], dist, l);
+//             else
+//                 decreaseMax(heaps[i], tamHeaps[i], dist, l);
+//             dist = 0.0;
+            
+//         }
+
+//         // Copia os valores da heap pro R
+//         for (int l = 0; l < k; l++){
+//             heapChave[(i * k) + l] = heaps[i][l].chave;
+//             heapValor[(i * k) + l] = heaps[i][l].valor;
+//             heaps[i][l].chave = 0;
+//             heaps[i][l].valor = 0;
+//         }
+
+//         tamHeaps[i] = 0;
+//     }
+
+//     free(heap);
+
+//     MPI_Gather(heapChave, k * limite, MPI_FLOAT, heapChaveLocal, k * limite, MPI_FLOAT, 0, comm);
+//     MPI_Gather(heapValor, k * limite, MPI_INT, heapValorLocal, k * limite, MPI_INT, 0, comm);
+
+//     if(processId == 0){
+//         for(int i = 0; i < nq; i++){
+//             for(int j = 0; j < k; j++){
+//                 R[(i*k) + j].chave = heapChaveLocal[(i * k) + j];
+//                 R[(i*k) + j].valor = heapValorLocal[(i * k) + j];
+//             }
+//         }
+//     }
+// }
+
 int main(int argc, char* argv[])
 {
     // Tratando a entrada
-    if (argc != 5) 
+    if (argc != 6) 
     {
-        printf("Forma de execução: mpirun <Número de processos> %s <Número de pontos em Q> <Número de pontos em P> <Número de dimensoes dos pontos> <Tamanho de cada conjunto de vizinho>\n" , argv[0]); 
+        printf("Forma de execução: mpirun <Número de processos> %s <Número de pontos em Q> <Número de pontos em P> <Número de dimensoes dos pontos> <Tamanho de cada conjunto de vizinho> <Número de threads>\n" , argv[0]); 
         exit(EXIT_FAILURE);
     } 
 
-    long int nq, npp, d, k;
-    int nproc, processId;
     nq = atoi(argv[1]);
     npp = atoi(argv[2]);
     d = atoi(argv[3]);
     k = atoi(argv[4]);
+    nt = atoi(argv[5]);
+
+    heapChave = malloc(k * limite * sizeof(float));
+    heapValor = malloc (k * limite * sizeof(int));
+    QLocal = malloc(d * limite * sizeof(float));
+    heapChaveLocal = malloc(k * nq * sizeof(float));
+    heapValorLocal = malloc(k * nq * sizeof(int));
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     MPI_Comm_rank(MPI_COMM_WORLD, &processId);
+
+    limite = nq / nproc;
     
     // Cria e aloca matrizes
-    float *Q;
     Q = malloc(nq * d * sizeof(float*));
-
-    float *P;
     P = malloc(npp * d * sizeof(float*));
-
-    par_t *R;
     R = malloc(nq * k * sizeof(par_t*));
+
+    // Aloca as heaps
+    heaps = malloc(limite * sizeof(par_t *));
+    for (int i = 0; i < limite; i++)
+        heaps[i] = malloc(k * sizeof(par_t));
+
+    tamHeaps = malloc(limite * sizeof(int));
 
     // Randomiza a SEED
     srand(time(NULL));
@@ -309,54 +389,85 @@ int main(int argc, char* argv[])
         chrono_start(&chrono);
     }
 
-    // Execução principal do programa
-    calculaDistancias(Q, nq, P, npp, d, k, R, nq / nproc, MPI_COMM_WORLD, processId);
+    // MPI_Scatter(Q, d * limite, MPI_FLOAT, QLocal, d * limite, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(P, npp * d, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-    // Para os processos restantes se o número passado foi ímpar
-    if (nq % nproc)
-        calculaDistanciasSeq(Q, nq, P, npp, d, k, R, nq - (nq % nproc));
+    // // Cria vetor com id das threads
+    // int *threadIds = malloc(nt * sizeof(int));
 
+    // threadIds[0] = 0;
+    // calculaDistanciasThreads(threadIds);
 
-    // Impressão do tempo e realização dos testes
-    if(processId == 0){
-        chrono_stop(&chrono);
-        double total_time_in_seconds = (double)chrono_gettotal(&chrono) / ((double)1000 * 1000 * 1000);
-        printf("total_time_in_seconds: %lf s\n", total_time_in_seconds);
-        double MBPS = (((double) nq * npp * d) / ((double)total_time_in_seconds*1000*1000));
-        printf("Throughput: %lf MB/s\n", MBPS);
-        verificaKNN(Q, nq, P, npp, d, k, R);
-    }
-
-    // PRINTS DE TESTE
-    // if(processId == 20){
-
-    //     for (int i = 0; i < nq; i++)
-    //     {
-    //         for (int j = 0; j < d; j++)
-    //             printf("[%.0f] ", Q[(i*d) + j]);
-    //         printf("\n");
-    //     }
-    //     printf("\n");
-
-    //     for (int i = 0; i < npp; i++)
-    //     {
-    //         for (int j = 0; j < d; j++)
-    //             printf("[%.0f] ", P[(i*d) + j]);
-    //         printf("\n");
-    //     }
-
-    //     for (int i = 0; i < nq; i++)
-    //     {
-    //         for (int j = 0; j < k; j++)
-    //             printf("[%.0f] ", R[(i*k) + j].chave);
-    //         printf("\n");
-    //     }
+    // // Começa as threads
+    // for (int i = 1; i < nt; i++)
+    // {
+    //     threadIds[i] = i;
+    //     pthread_create(&threads[i], NULL, &calculaDistanciasThreads, threadIds + i);
     // }
+
+    // // Termina as threads
+    // for (int i = 1; i < nt; i++)
+    //     pthread_join(threads[i], NULL);
+
+    // //calculaDistancias(Q, nq, P, npp, d, k, R, nq / nproc, MPI_COMM_WORLD, processId);
+
+    // MPI_Gather(heapChave, limite * k, MPI_FLOAT, heapChaveLocal, limite * k, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    // MPI_Gather(heapChave, limite * k, MPI_INT, heapValorLocal, limite * k, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // // Para os processos restantes se o número passado foi ímpar
+    // if (nq % nproc)
+    //     calculaDistanciasSeq(Q, nq, P, npp, d, k, R, nq - (nq % nproc));
+
+    // // Impressão do tempo e realização dos testes
+    // if(processId == 0){
+    //     chrono_stop(&chrono);
+    //     double total_time_in_seconds = (double)chrono_gettotal(&chrono) / ((double)1000 * 1000 * 1000);
+    //     printf("total_time_in_seconds: %lf s\n", total_time_in_seconds);
+    //     double MBPS = (((double) nq * npp * d) / ((double)total_time_in_seconds*1000*1000));
+    //     printf("Throughput: %lf MB/s\n", MBPS);
+    //     //verificaKNN(Q, nq, P, npp, d, k, R);
+    // }
+
+    // // PRINTS DE TESTE
+    // // if(processId == 20){
+
+    // //     for (int i = 0; i < nq; i++)
+    // //     {
+    // //         for (int j = 0; j < d; j++)
+    // //             printf("[%.0f] ", Q[(i*d) + j]);
+    // //         printf("\n");
+    // //     }
+    // //     printf("\n");
+
+    // //     for (int i = 0; i < npp; i++)
+    // //     {
+    // //         for (int j = 0; j < d; j++)
+    // //             printf("[%.0f] ", P[(i*d) + j]);
+    // //         printf("\n");
+    // //     }
+
+    // //     for (int i = 0; i < nq; i++)
+    // //     {
+    // //         for (int j = 0; j < k; j++)
+    // //             printf("[%.0f] ", R[(i*k) + j].chave);
+    // //         printf("\n");
+    // //     }
+    // // }
     
     // Libera memória
     free(P);
     free(Q);
     free(R);
+    for (int i = 0; i < limite; i++)
+        free(heaps[i]);
+    free(heaps);
+    free(tamHeaps);
+
+    free(QLocal);
+    free(heapChave);
+    free(heapValor);
+    free(heapChaveLocal);
+    free(heapValorLocal);
 
     MPI_Finalize();
 
