@@ -389,6 +389,32 @@ int main(int argc, char* argv[])
         chrono_start(&chrono);
     }
 
+    // PRINTS DE TESTE
+    if(processId == 0){
+
+        for (int i = 0; i < nq; i++)
+        {
+            for (int j = 0; j < d; j++)
+                printf("[%.0f] ", Q[(i*d) + j]);
+            printf("\n");
+        }
+        printf("\n");
+
+        for (int i = 0; i < npp; i++)
+        {
+            for (int j = 0; j < d; j++)
+                printf("[%.0f] ", P[(i*d) + j]);
+            printf("\n");
+        }
+
+        // for (int i = 0; i < nq; i++)
+        // {
+        //     for (int j = 0; j < k; j++)
+        //         printf("[%.0f] ", R[(i*k) + j].chave);
+        //     printf("\n");
+        // }
+    }
+
     // MPI_Scatter(Q, d * limite, MPI_FLOAT, QLocal, d * limite, MPI_FLOAT, 0, MPI_COMM_WORLD);
     // MPI_Bcast(P, npp * d, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
