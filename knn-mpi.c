@@ -373,13 +373,15 @@ int main(int argc, char* argv[])
 
     // Aloca as heaps
     heaps = malloc(limite * sizeof(par_t *));
-    for (int i = 0; i < limite; i++)
-        heaps[i] = malloc(k * sizeof(par_t));
-
     tamHeaps = malloc(limite * sizeof(int));
+    for (int i = 0; i < limite; i++)
+    {
+        tamHeaps[i] = 0;
+        heaps[i] = malloc(k * sizeof(par_t));
+    }
 
     // Randomiza a SEED
-    srand(time(NULL));
+    //srand(time(NULL));
 
     // Preenche matrizes
     if(processId == 0){
@@ -389,33 +391,14 @@ int main(int argc, char* argv[])
         chrono_start(&chrono);
     }
 
-    // // PRINTS DE TESTE
-    // if(processId == 0){
-
-    //     for (int i = 0; i < nq; i++)
-    //     {
-    //         for (int j = 0; j < d; j++)
-    //             printf("[%.0f] ", Q[(i*d) + j]);
-    //         printf("\n");
-    //     }
-    //     printf("\n");
-
-    //     for (int i = 0; i < npp; i++)
-    //     {
-    //         for (int j = 0; j < d; j++)
-    //             printf("[%.0f] ", P[(i*d) + j]);
-    //         printf("\n");
-    //     }
-    // }
-
     MPI_Scatter(Q, d * limite, MPI_FLOAT, QLocal, d * limite, MPI_FLOAT, 0, MPI_COMM_WORLD);
     MPI_Bcast(P, npp * d, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-    // // Cria vetor com id das threads
-    // int *threadIds = malloc(nt * sizeof(int));
+    // Cria vetor com id das threads
+    int *threadIds = malloc(nt * sizeof(int));
 
-    // threadIds[0] = 0;
-    // calculaDistanciasThreads(threadIds);
+    threadIds[0] = 0;
+    calculaDistanciasThreads(threadIds);
 
     // // Começa as threads
     // for (int i = 1; i < nt; i++)
