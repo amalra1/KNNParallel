@@ -395,10 +395,10 @@ int main(int argc, char* argv[])
     MPI_Bcast(P, npp * d, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
     // Cria vetor com id das threads
-    int *threadIds = malloc(nt * sizeof(int));
+    // int *threadIds = malloc(nt * sizeof(int));
 
-    threadIds[0] = 0;
-    calculaDistanciasThreads(threadIds);
+    // threadIds[0] = 0;
+    // calculaDistanciasThreads(threadIds);
 
     // // Começa as threads
     // for (int i = 1; i < nt; i++)
