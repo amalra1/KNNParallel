@@ -274,18 +274,6 @@ void* calculaDistanciasThreads(void *args)
 
         tamHeaps[i] = 0;
     }
-
-    MPI_Gather(heapChave, limite * k, MPI_FLOAT, heapChaveLocal, limite * k, MPI_FLOAT, 0, MPI_COMM_WORLD);
-    MPI_Gather(heapChave, limite * k, MPI_INT, heapValorLocal, limite * k, MPI_INT, 0, MPI_COMM_WORLD);
-
-    if(processId == 0){
-        for(int i = 0; i < nq; i++){
-            for(int j = 0; j < k; j++){
-                R[(i*k) + j].chave = heapChaveLocal[(i * k) + j];
-                R[(i*k) + j].valor = heapValorLocal[(i * k) + j];
-            }
-        }
-    }
 }
 
 
@@ -424,6 +412,18 @@ int main(int argc, char* argv[])
     // Termina as threads
     for (int i = 1; i < nt; i++)
         pthread_join(threads[i], NULL);
+
+    MPI_Gather(heapChave, limite * k, MPI_FLOAT, heapChaveLocal, limite * k, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Gather(heapValor, limite * k, MPI_INT, heapValorLocal, limite * k, MPI_INT, 0, MPI_COMM_WORLD);
+
+    if(processId == 0){
+        for(int i = 0; i < nq; i++){
+            for(int j = 0; j < k; j++){
+                R[(i*k) + j].chave = heapChaveLocal[(i * k) + j];
+                R[(i*k) + j].valor = heapValorLocal[(i * k) + j];
+            }
+        }
+    }
 
     // Para os processos restantes se sobrar algo da divisão do Q entre os processos
     if (nq % nproc)
