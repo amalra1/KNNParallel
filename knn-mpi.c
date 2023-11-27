@@ -164,13 +164,11 @@ void geraConjuntoDeDados(float *C, int nc, int D)
         for(int j = 0; j < D; j++)
         {
             // Gera dois aleatorios 
-            //int a = rand();
-            //int b = rand(); 
+            int a = rand();
+            int b = rand(); 
         
             // Junta esses dois e forma um numero para a coordenada
-            //float elem = a * 100.0 + b;
-
-            float elem = rand() % 5;
+            float elem = a * 100.0 + b;
 
             // Inserir o valor v na posição p
             C[(i*D) + j] = elem;
@@ -392,7 +390,7 @@ int main(int argc, char* argv[])
     }
 
     // Randomiza a SEED
-    //srand(time(NULL));
+    srand(time(NULL));
 
     // Preenche matrizes e começa a contagem de tempo
     if(processId == 0)
@@ -439,7 +437,7 @@ int main(int argc, char* argv[])
         printf("total_time_in_seconds: %lf s\n", total_time_in_seconds);
         double MBPS = (((double) nq * npp * d) / ((double)total_time_in_seconds*1000*1000));
         printf("Throughput: %lf MB/s\n", MBPS);
-        //verificaKNN(Q, nq, P, npp, d, k, R); // DESCOMENTAR NA ENTREGA
+        verificaKNN(Q, nq, P, npp, d, k, R); // DESCOMENTAR NA ENTREGA
     }
 
     // PRINTS DE TESTE
